@@ -7,6 +7,8 @@
 #include <QPushButton>
 #include <QToolButton>    // ✅ Ajouté pour le bouton profil
 #include <QJsonArray>
+#include <QTableWidget> // ✅ Ajout pour la vue horaire
+
 
 class AgendaWindow : public QMainWindow {
     Q_OBJECT
@@ -30,8 +32,12 @@ private:
     QCalendarWidget *calendar;
     QListWidget *eventList;
     QPushButton *addButton;
+    QTableWidget *hourView; // ✅ Ajout pour la vue horaire
     QToolButton *profileButton;  // ✅ Nouveau : bouton profil
     QJsonArray events;
+    void updateHourView(const QDate &date); // ✅ Ajout pour vue horaire
+
+
 
     QString email; // ✅ E-mail de l’utilisateur connecté
 

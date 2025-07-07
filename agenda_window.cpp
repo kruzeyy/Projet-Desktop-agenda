@@ -5,6 +5,11 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
+#include <QTableWidget> // ✅ Ajout pour la vue horaire
+#include <QHeaderView> // ✅ Ajout pour utiliser horizontalHeader()
+#include <QInputDialog> // ✅ Ajout pour demander l'heure
+
+
 
 
 AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
@@ -15,9 +20,29 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
 {
     // Mise en page
     QWidget *central = new QWidget;
-    QVBoxLayout *layout = new QVBoxLayout(central);
-    layout->addWidget(calendar);
-    layout->addWidget(eventList);
+    QHBoxLayout *mainLayout = new QHBoxLayout(central);
+
+    // ✅ Colonne gauche : Calendrier + Liste
+    QVBoxLayout *leftLayout = new QVBoxLayout;
+    leftLayout->addWidget(calendar);
+    leftLayout->addWidget(eventList);
+
+    // ✅ Colonne droite : Vue horaire
+    hourView = new QTableWidget;
+    hourView->setRowCount(24);
+    hourView->setColumnCount(1);
+    hourView->setHorizontalHeaderLabels(QStringList() << "Événements");
+    for (int i = 0; i < 24; ++i) {
+        hourView->setVerticalHeaderItem(i, new QTableWidgetItem(QString("%1:00").arg(i, 2, 10, QChar('0'))));
+        hourView->setItem(i, 0, new QTableWidgetItem(""));
+    }
+    hourView->horizontalHeader()->setStretchLastSection(true);
+    hourView->verticalHeader()->setDefaultSectionSize(30);
+
+    // ✅ Ajoute les deux colonnes
+    mainLayout->addLayout(leftLayout, 1);
+    mainLayout->addWidget(hourView, 1);
+
     setCentralWidget(central);
 
 
@@ -108,8 +133,11 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     // Connecter signaux et slots
     connect(addButton, &QPushButton::clicked, this, &AgendaWindow::addEvent);
     connect(calendar, &QCalendarWidget::selectionChanged, [=]() {
-        updateEventList(calendar->selectedDate());
+        QDate selectedDate = calendar->selectedDate();
+        updateEventList(selectedDate);
+        updateHourView(selectedDate); // ✅ Met à jour la vue horaire
     });
+
 
     // Charger les événements
     loadEvents();
@@ -126,8 +154,23 @@ void AgendaWindow::addEvent() {
         QJsonObject event;
         event["date"] = calendar->selectedDate().toString(Qt::ISODate);
         event["title"] = dialog.getEventTitle();
+        event["hour"] = dialog.getEventTime().toString("HH:mm"); // ✅ Ajouté
+        event["allDay"] = dialog.isAllDay(); // ✅ Sauvegarde le statut
+        if (!dialog.isAllDay()) {
+            event["hour"] = dialog.getEventTime().hour();
+        } else {
+            event["hour"] = -1; // ✅ -1 pour indiquer toute la journée
+        }
+
+        // ✅ Demander une heure
+        bool ok;
+        event["hour"] = dialog.getEventTime().hour();
+
         events.append(event);
         updateEventList(calendar->selectedDate());
+        updateHourView(calendar->selectedDate());
+
+
 
         // 🎨 Mettre à jour les jours avec événements
         highlightEventDays();
@@ -142,6 +185,30 @@ void AgendaWindow::updateEventList(const QDate &date) {
             eventList->addItem(obj["title"].toString());
     }
 }
+void AgendaWindow::updateHourView(const QDate &date) {
+    hourView->clearContents(); // ✅ Réinitialise la vue horaire
+
+    int allDayRow = 0; // Ligne spéciale pour les événements toute la journée
+
+    for (const QJsonValue &value : events) {
+        QJsonObject obj = value.toObject();
+        if (obj["date"].toString() == date.toString(Qt::ISODate)) {
+            QString title = obj["title"].toString();
+
+            if (obj["allDay"].toBool()) {
+                // ✅ Afficher les événements toute la journée en haut
+                hourView->setItem(allDayRow, 0, new QTableWidgetItem("[📌] " + title));
+                allDayRow++; // Si plusieurs événements, empile-les
+            } else {
+                int hour = obj["hour"].toInt();
+                hourView->setItem(hour, 0, new QTableWidgetItem(title));
+            }
+        }
+    }
+}
+
+
+
 
 void AgendaWindow::highlightEventDays() {
     QTextCharFormat eventDayFormat;

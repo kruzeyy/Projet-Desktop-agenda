@@ -11,7 +11,15 @@ AddEventDialog::AddEventDialog(QWidget *parent)
     QLabel *label = new QLabel("Titre de l'événement :");
     layout->addWidget(label);
     layout->addWidget(titleEdit);
+    timeEdit = new QTimeEdit;
+    timeEdit->setDisplayFormat("HH:mm"); // ✅ Format 24h
+    timeEdit->setTime(QTime::currentTime()); // ✅ Heure actuelle par défaut
+    layout->addWidget(new QLabel("Heure de l'événement :"));
+    layout->addWidget(timeEdit);
     layout->addWidget(okButton);
+    allDayCheckBox = new QCheckBox("Toute la journée");
+    layout->addWidget(allDayCheckBox);
+
 
     // Style général de la pop-up
     setStyleSheet(R"(
@@ -52,8 +60,22 @@ AddEventDialog::AddEventDialog(QWidget *parent)
 
     // Bouton OK ferme la pop-up
     connect(okButton, &QPushButton::clicked, this, &AddEventDialog::accept);
+    connect(allDayCheckBox, &QCheckBox::toggled, [=](bool checked) {
+        timeEdit->setEnabled(!checked);
+    });
+
 }
 
 QString AddEventDialog::getEventTitle() const {
     return titleEdit->text();
 }
+
+QTime AddEventDialog::getEventTime() const {
+    return timeEdit->time();
+}
+
+bool AddEventDialog::isAllDay() const {
+    return allDayCheckBox->isChecked();
+}
+
+
