@@ -8,6 +8,8 @@
 #include <QToolButton>    // ✅ Ajouté pour le bouton profil
 #include <QJsonArray>
 #include <QTableWidget> // ✅ Ajout pour la vue horaire
+#include <QVBoxLayout>
+
 
 
 class AgendaWindow : public QMainWindow {
@@ -26,6 +28,7 @@ private slots:
     // ✅ Slots pour le menu profil
     void onProfileClicked();
     void onLogoutClicked();
+    void deleteEvent();
 
 
 private:
@@ -35,7 +38,9 @@ private:
     QTableWidget *hourView; // ✅ Ajout pour la vue horaire
     QToolButton *profileButton;  // ✅ Nouveau : bouton profil
     QJsonArray events;
+    QPushButton *deleteButton;
     void updateHourView(const QDate &date); // ✅ Ajout pour vue horaire
+    QVBoxLayout *leftLayout; // ✅ Permet d'y accéder depuis toute la classe
 
 
 

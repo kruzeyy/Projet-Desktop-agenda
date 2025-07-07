@@ -16,12 +16,18 @@ public:
     QString getEventTitle() const;
     QTime getEventTime() const;  // ✅ Récupère l’heure
     bool isAllDay() const;       // ✅ Déplacé ici dans la classe
+    QTime getStartTime() const;
+    QTime getEndTime() const;
+
 
 private:
     QLineEdit *titleEdit;
     QPushButton *okButton;
     QTimeEdit *timeEdit;
     QCheckBox *allDayCheckBox;
+    QTimeEdit *endTimeEdit; // ✅ champ pour l’heure de fin
+    QTimeEdit *startTimeEdit; // ✅ champ pour l’heure de début
+
 };
 
 #endif // ADD_EVENT_DIALOG_H

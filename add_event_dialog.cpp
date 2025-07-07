@@ -12,11 +12,17 @@ AddEventDialog::AddEventDialog(QWidget *parent)
     layout->addWidget(label);
     layout->addWidget(titleEdit);
     timeEdit = new QTimeEdit;
+    endTimeEdit = new QTimeEdit(this); // ✅ Champ heure de fin
+    endTimeEdit->setTime(QTime::currentTime().addSecs(3600)); // 1h après par défaut
     timeEdit->setDisplayFormat("HH:mm"); // ✅ Format 24h
     timeEdit->setTime(QTime::currentTime()); // ✅ Heure actuelle par défaut
     layout->addWidget(new QLabel("Heure de l'événement :"));
     layout->addWidget(timeEdit);
+
+    layout->addWidget(new QLabel("Heure de fin :"));
+    layout->addWidget(endTimeEdit);
     layout->addWidget(okButton);
+
     allDayCheckBox = new QCheckBox("Toute la journée");
     layout->addWidget(allDayCheckBox);
 
@@ -78,4 +84,10 @@ bool AddEventDialog::isAllDay() const {
     return allDayCheckBox->isChecked();
 }
 
+QTime AddEventDialog::getStartTime() const {
+    return startTimeEdit->time();
+}
 
+QTime AddEventDialog::getEndTime() const {
+    return endTimeEdit->time();
+}

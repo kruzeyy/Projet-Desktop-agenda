@@ -26,6 +26,30 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     QVBoxLayout *leftLayout = new QVBoxLayout;
     leftLayout->addWidget(calendar);
     leftLayout->addWidget(eventList);
+    leftLayout = new QVBoxLayout;
+    leftLayout->addWidget(calendar);
+    leftLayout->addWidget(eventList);
+
+    // ✅ Ajout du bouton Supprimer
+    deleteButton = new QPushButton("🗑 Supprimer");
+    deleteButton->setStyleSheet(R"(
+    QPushButton {
+        background-color: #BF616A;
+        color: white;
+        border-radius: 8px;
+        padding: 6px;
+    }
+    QPushButton:hover {
+        background-color: #D08770;
+    }
+)");
+    leftLayout->addWidget(deleteButton); // Ajoute sous la liste
+
+    // Connecter le bouton à la suppression
+    connect(deleteButton, &QPushButton::clicked, this, &AgendaWindow::deleteEvent);
+
+    leftLayout->addWidget(deleteButton);
+
 
     // ✅ Colonne droite : Vue horaire
     hourView = new QTableWidget;
@@ -146,36 +170,60 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
 
 AgendaWindow::~AgendaWindow() {
     saveEvents();
+    deleteButton = new QPushButton("🗑 Supprimer", this);
+    deleteButton->setFixedHeight(40);
+    deleteButton->setStyleSheet(R"(
+    QPushButton {
+        background-color: #BF616A;
+        color: white;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: bold;
+        padding: 6px 12px;
+    }
+    QPushButton:hover {
+        background-color: #D08770;
+    }
+)");
+    leftLayout->addWidget(deleteButton); // Ajoute sous la liste des événements
+
+
 }
 
 void AgendaWindow::addEvent() {
     AddEventDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
-        QJsonObject event;
-        event["date"] = calendar->selectedDate().toString(Qt::ISODate);
-        event["title"] = dialog.getEventTitle();
-        event["hour"] = dialog.getEventTime().toString("HH:mm"); // ✅ Ajouté
-        event["allDay"] = dialog.isAllDay(); // ✅ Sauvegarde le statut
-        if (!dialog.isAllDay()) {
-            event["hour"] = dialog.getEventTime().hour();
-        } else {
-            event["hour"] = -1; // ✅ -1 pour indiquer toute la journée
+        QString title = dialog.getEventTitle().trimmed();
+
+        // 🛑 Vérifie si le titre est vide
+        if (title.isEmpty()) {
+            QMessageBox::warning(this, "Titre manquant",
+                                 "Veuillez entrer un titre pour l'événement.");
+            return; // ❌ Annule l’ajout
         }
 
-        // ✅ Demander une heure
-        bool ok;
-        event["hour"] = dialog.getEventTime().hour();
+        QJsonObject event;
+        event["date"] = calendar->selectedDate().toString(Qt::ISODate);
+        event["title"] = title;
+        event["allDay"] = dialog.isAllDay();
+
+        if (!dialog.isAllDay()) {
+            event["startTime"] = dialog.getEventTime().toString("HH:mm");
+            event["endTime"] = dialog.getEndTime().toString("HH:mm");
+        } else {
+            event["startTime"] = "00:00"; // Valeur par défaut
+            event["endTime"] = "23:59";
+        }
 
         events.append(event);
         updateEventList(calendar->selectedDate());
         updateHourView(calendar->selectedDate());
-
-
-
-        // 🎨 Mettre à jour les jours avec événements
         highlightEventDays();
     }
 }
+
+
+
 
 void AgendaWindow::updateEventList(const QDate &date) {
     eventList->clear();
@@ -197,15 +245,69 @@ void AgendaWindow::updateHourView(const QDate &date) {
 
             if (obj["allDay"].toBool()) {
                 // ✅ Afficher les événements toute la journée en haut
-                hourView->setItem(allDayRow, 0, new QTableWidgetItem("[📌] " + title));
+                hourView->setItem(allDayRow, 0, new QTableWidgetItem("[📌] " + title + " (Toute la journée)"));
                 allDayRow++; // Si plusieurs événements, empile-les
             } else {
-                int hour = obj["hour"].toInt();
-                hourView->setItem(hour, 0, new QTableWidgetItem(title));
+                QTime start = QTime::fromString(obj["startTime"].toString(), "HH:mm");
+                QTime end = QTime::fromString(obj["endTime"].toString(), "HH:mm");
+
+                if (start.isValid() && end.isValid()) {
+                    for (int h = start.hour(); h <= end.hour(); ++h) {
+                        QString timeSlotText;
+
+                        if (h == start.hour()) {
+                            // ✅ Sur la première ligne : afficher intervalle et titre
+                            timeSlotText = QString("%1 - %2 %3")
+                                               .arg(start.toString("HH:mm"))
+                                               .arg(end.toString("HH:mm"))
+                                               .arg(title);
+                        } else {
+                            // ✅ Sur les lignes suivantes : affichage simplifié
+                            timeSlotText = "↳ " + title;
+                        }
+
+                        hourView->setItem(h, 0, new QTableWidgetItem(timeSlotText));
+                    }
+                }
             }
         }
     }
 }
+
+void AgendaWindow::deleteEvent() {
+    QListWidgetItem *selectedItem = eventList->currentItem();
+    if (!selectedItem) return;
+
+    QString eventTitle = selectedItem->text();
+    QDate selectedDate = calendar->selectedDate();
+
+    // ✅ Confirmer la suppression
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Supprimer l'événement",
+                                  "Voulez-vous vraiment supprimer l'événement : " + eventTitle + " ?",
+                                  QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        // Parcourir à l'envers pour éviter les erreurs d'index lors de la suppression
+        for (int i = events.size() - 1; i >= 0; --i) {
+            QJsonObject obj = events[i].toObject();
+            if (obj["date"].toString() == selectedDate.toString(Qt::ISODate)
+                && obj["title"].toString() == eventTitle) {
+                events.removeAt(i); // ✅ Supprime du tableau
+            }
+        }
+
+        saveEvents(); // ✅ Sauvegarde
+        updateEventList(selectedDate);
+        updateHourView(selectedDate);
+        highlightEventDays();
+    }
+}
+
+
+
+
+
 
 
 
