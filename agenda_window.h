@@ -36,6 +36,7 @@ private slots:
     void sendInvitation();
     void handleIncomingInvitation();
     void editEvent();
+    void exportToIcal();
 
 
 private:
@@ -51,6 +52,7 @@ private:
     QTcpServer *inviteServer = nullptr;
     QPushButton *inviteButton;
     QPushButton *editButton;   // ✅ Ajout bouton modifier
+    QPushButton *exportButton;
 
 
     QString email; // ✅ E-mail de l’utilisateur connecté
@@ -62,5 +64,7 @@ private:
 protected:
     void resizeEvent(QResizeEvent *event) override;
 };
+
+
 
 #endif // AGENDAWINDOW_H

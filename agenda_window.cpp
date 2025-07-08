@@ -8,6 +8,11 @@
 #include <QTableWidget> // ✅ Ajout pour la vue horaire
 #include <QHeaderView> // ✅ Ajout pour utiliser horizontalHeader()
 #include <QInputDialog> // ✅ Ajout pour demander l'heure
+#include <QMessageBox>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QFileDialog>
+
 
 
 
@@ -20,7 +25,8 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     inviteServer(new QTcpServer(this)),      // ✅ Ajout serveur invitations
     inviteButton(new QPushButton("📨 Inviter", this)), // ✅ Ajout bouton inviter
     // ✅ Ajout du bouton Modifier
-    editButton (new QPushButton("✏️ Modifier", this))
+    editButton (new QPushButton("✏️ Modifier", this)),
+    exportButton (new QPushButton("📥 Exporter iCal", this))
 {
     // Mise en page
     QWidget *central = new QWidget;
@@ -76,6 +82,22 @@ QPushButton:hover {
     background-color: #88C0D0;
 }
 )");
+    exportButton->setStyleSheet(R"(
+    QPushButton {
+        background-color: #EBCB8B;
+        color: #2E3440;
+        border-radius: 8px;
+        padding: 6px;
+        font-weight: bold;
+    }
+    QPushButton:hover {
+        background-color: #D08770;
+        color: white;
+    }
+)");
+    leftLayout->addWidget(exportButton);
+    connect(exportButton, &QPushButton::clicked, this, &AgendaWindow::exportToIcal);
+
     leftLayout->addWidget(editButton);
 
     // Connecte le bouton à la fonction de modification
@@ -554,4 +576,37 @@ void AgendaWindow::editEvent() {
             break; // ✅ On a trouvé et modifié
         }
     }
+}
+
+void AgendaWindow::exportToIcal() {
+    QString fileName = QFileDialog::getSaveFileName(this, "Exporter en iCal", "agenda.ics", "iCal Files (*.ics)");
+    if (fileName.isEmpty())
+        return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Erreur", "Impossible de créer le fichier iCal.");
+        return;
+    }
+
+    QTextStream out(&file);
+    out << "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MonAgenda//FR\n";
+
+    for (const QJsonValue &value : events) {
+        QJsonObject obj = value.toObject();
+        QDate date = QDate::fromString(obj["date"].toString(), Qt::ISODate);
+        QTime start = QTime::fromString(obj["startTime"].toString(), "HH:mm");
+        QTime end = QTime::fromString(obj["endTime"].toString(), "HH:mm");
+
+        out << "BEGIN:VEVENT\n";
+        out << "SUMMARY:" << obj["title"].toString() << "\n";
+        out << "DTSTART:" << date.toString("yyyyMMdd") << "T" << start.toString("HHmmss") << "\n";
+        out << "DTEND:" << date.toString("yyyyMMdd") << "T" << end.toString("HHmmss") << "\n";
+        out << "END:VEVENT\n";
+    }
+
+    out << "END:VCALENDAR\n";
+    file.close();
+
+    QMessageBox::information(this, "Export terminé", "Le fichier iCal a été exporté avec succès !");
 }
