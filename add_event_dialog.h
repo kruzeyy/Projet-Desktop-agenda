@@ -18,6 +18,10 @@ public:
     bool isAllDay() const;       // ✅ Déplacé ici dans la classe
     QTime getStartTime() const;
     QTime getEndTime() const;
+    void setEventTitle(const QString &title);
+    void setEventTime(const QTime &time);
+    void setEndTime(const QTime &time);
+    void setAllDay(bool allDay);
 
 
 private:
@@ -27,6 +31,8 @@ private:
     QCheckBox *allDayCheckBox;
     QTimeEdit *endTimeEdit; // ✅ champ pour l’heure de fin
     QTimeEdit *startTimeEdit; // ✅ champ pour l’heure de début
+    QPushButton *editButton; // ✅ Bouton pour modifier un événement
+
 
 };
 

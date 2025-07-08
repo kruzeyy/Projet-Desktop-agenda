@@ -18,7 +18,9 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     eventList(new QListWidget),
     addButton(new QPushButton("➕", this)), // Parent direct de la fenêtre
     inviteServer(new QTcpServer(this)),      // ✅ Ajout serveur invitations
-    inviteButton(new QPushButton("📨 Inviter", this)) // ✅ Ajout bouton inviter
+    inviteButton(new QPushButton("📨 Inviter", this)), // ✅ Ajout bouton inviter
+    // ✅ Ajout du bouton Modifier
+    editButton (new QPushButton("✏️ Modifier", this))
 {
     // Mise en page
     QWidget *central = new QWidget;
@@ -62,6 +64,23 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     leftLayout->addWidget(inviteButton);
     connect(inviteButton, &QPushButton::clicked, this, &AgendaWindow::sendInvitation);
 
+    editButton->setStyleSheet(R"(
+QPushButton {
+    background-color: #A3BE8C;
+    color: white;
+    border-radius: 8px;
+    padding: 6px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #88C0D0;
+}
+)");
+    leftLayout->addWidget(editButton);
+
+    // Connecte le bouton à la fonction de modification
+    connect(editButton, &QPushButton::clicked, this, &AgendaWindow::editEvent);
+
     // ✅ Colonne droite : Vue horaire
     hourView = new QTableWidget;
     hourView->setRowCount(24);
@@ -73,6 +92,9 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     }
     hourView->horizontalHeader()->setStretchLastSection(true);
     hourView->verticalHeader()->setDefaultSectionSize(30);
+    hourView->setEditTriggers(QAbstractItemView::NoEditTriggers); // 🔒 Empêche l’édition
+    hourView->setFocusPolicy(Qt::NoFocus);                        // 🔒 Empêche la sélection
+
 
     // ✅ Ajoute les deux colonnes
     mainLayout->addLayout(leftLayout, 1);
@@ -483,4 +505,53 @@ void AgendaWindow::onProfileClicked() {
 void AgendaWindow::onLogoutClicked() {
     // ✅ Déconnexion : ferme la fenêtre
     this->close();
+}
+
+void AgendaWindow::editEvent() {
+    QListWidgetItem *selectedItem = eventList->currentItem();
+    if (!selectedItem) return;
+
+    QString eventTitle = selectedItem->text();
+    QDate selectedDate = calendar->selectedDate();
+
+    // 🔎 Trouver l'événement sélectionné
+    for (int i = 0; i < events.size(); ++i) {
+        QJsonObject obj = events[i].toObject();
+        if (obj["date"].toString() == selectedDate.toString(Qt::ISODate) &&
+            obj["title"].toString() == eventTitle) {
+
+            // 📝 Ouvre le dialogue pré-rempli
+            AddEventDialog dialog(this);
+            dialog.setEventTitle(obj["title"].toString());
+            dialog.setAllDay(obj["allDay"].toBool());
+
+            if (!obj["allDay"].toBool()) {
+                QTime start = QTime::fromString(obj["startTime"].toString(), "HH:mm");
+                QTime end = QTime::fromString(obj["endTime"].toString(), "HH:mm");
+                dialog.setEventTime(start);
+                dialog.setEndTime(end);
+            }
+
+            if (dialog.exec() == QDialog::Accepted) {
+                // 🔄 Mettre à jour l'événement
+                obj["title"] = dialog.getEventTitle();
+                obj["allDay"] = dialog.isAllDay();
+
+                if (!dialog.isAllDay()) {
+                    obj["startTime"] = dialog.getEventTime().toString("HH:mm");
+                    obj["endTime"] = dialog.getEndTime().toString("HH:mm");
+                } else {
+                    obj["startTime"] = "00:00";
+                    obj["endTime"] = "23:59";
+                }
+
+                events[i] = obj; // Remplacer l'ancien
+                saveEvents();
+                updateEventList(selectedDate);
+                updateHourView(selectedDate);
+                highlightEventDays();
+            }
+            break; // ✅ On a trouvé et modifié
+        }
+    }
 }

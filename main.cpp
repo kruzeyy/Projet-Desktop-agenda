@@ -1,5 +1,4 @@
 #include "agenda_window.h"
-#include "login_dialog.h" // ✅ Inclure le LoginDialog moderne
 #include <QApplication>
 #include <QPalette>
 #include <QColor>
@@ -24,23 +23,11 @@ int main(int argc, char *argv[]) {
 
     app.setPalette(palette);
 
-    // 📨 Boucle Login → Agenda → Login
-    while (true) {
-        LoginDialog loginDialog;
-        if (loginDialog.exec() == QDialog::Accepted) {
-            QString email = loginDialog.getEmail();
+    // ✅ Lancer directement l'agenda
+    AgendaWindow window;
+    window.setMinimumSize(600, 400);  // Taille minimale agréable
+    window.setWindowTitle("Agenda Partagé");
+    window.show();
 
-            // ✅ Créer et afficher la fenêtre principale avec l'e-mail
-            AgendaWindow window(nullptr, email);
-            window.setMinimumSize(600, 400);  // Taille minimale agréable
-            window.setWindowTitle("Agenda Partagé - " + email);
-            window.show();
-
-            app.exec(); // Lancer la fenêtre agenda
-        } else {
-            break; // ❌ L'utilisateur a fermé LoginDialog → quitter
-        }
-    }
-
-    return 0;
+    return app.exec();
 }

@@ -91,3 +91,19 @@ QTime AddEventDialog::getStartTime() const {
 QTime AddEventDialog::getEndTime() const {
     return endTimeEdit->time();
 }
+
+void AddEventDialog::setEventTitle(const QString &title) {
+    titleEdit->setText(title);
+}
+
+void AddEventDialog::setEventTime(const QTime &time) {
+    timeEdit->setTime(time);
+}
+
+void AddEventDialog::setEndTime(const QTime &time) {
+    endTimeEdit->setTime(time);
+}
+
+void AddEventDialog::setAllDay(bool allDay) {
+    allDayCheckBox->setChecked(allDay);
+}

@@ -9,5 +9,26 @@
         "endTime": "11:19",
         "startTime": "10:19",
         "title": "test"
+    },
+    {
+        "allDay": false,
+        "date": "2025-07-09",
+        "endTime": "18:00",
+        "startTime": "17:00",
+        "title": "Opthalmo"
+    },
+    {
+        "allDay": true,
+        "date": "2025-07-11",
+        "endTime": "23:59",
+        "startTime": "00:00",
+        "title": "Orgie"
+    },
+    {
+        "allDay": true,
+        "date": "2025-07-14",
+        "endTime": "23:59",
+        "startTime": "00:00",
+        "title": "test"
     }
 ]

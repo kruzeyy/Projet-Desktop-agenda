@@ -35,6 +35,7 @@ private slots:
     void deleteEvent();
     void sendInvitation();
     void handleIncomingInvitation();
+    void editEvent();
 
 
 private:
@@ -49,7 +50,7 @@ private:
     QVBoxLayout *leftLayout; // ✅ Permet d'y accéder depuis toute la classe
     QTcpServer *inviteServer = nullptr;
     QPushButton *inviteButton;
-
+    QPushButton *editButton;   // ✅ Ajout bouton modifier
 
 
     QString email; // ✅ E-mail de l’utilisateur connecté
