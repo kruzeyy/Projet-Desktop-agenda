@@ -8,7 +8,8 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 COMPONENTS Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
+
 
 add_executable(${PROJECT_NAME}
     main.cpp
@@ -18,6 +19,7 @@ add_executable(${PROJECT_NAME}
     add_event_dialog.h
     login_dialog.h
     login_dialog.cpp
+    .gitignore
 )
 
-target_link_libraries(${PROJECT_NAME} Qt6::Widgets)
+target_link_libraries(${PROJECT_NAME} Qt6::Widgets Qt6::Network)

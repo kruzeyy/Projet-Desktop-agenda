@@ -9,6 +9,10 @@
 #include <QJsonArray>
 #include <QTableWidget> // ✅ Ajout pour la vue horaire
 #include <QVBoxLayout>
+#include <QTcpServer>
+#include <QTcpSocket>
+
+
 
 
 
@@ -29,6 +33,8 @@ private slots:
     void onProfileClicked();
     void onLogoutClicked();
     void deleteEvent();
+    void sendInvitation();
+    void handleIncomingInvitation();
 
 
 private:
@@ -41,6 +47,8 @@ private:
     QPushButton *deleteButton;
     void updateHourView(const QDate &date); // ✅ Ajout pour vue horaire
     QVBoxLayout *leftLayout; // ✅ Permet d'y accéder depuis toute la classe
+    QTcpServer *inviteServer = nullptr;
+    QPushButton *inviteButton;
 
 
 

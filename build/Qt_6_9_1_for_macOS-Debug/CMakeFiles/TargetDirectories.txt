@@ -1,0 +1,5 @@
+/Users/maxime/Projet-Desktop-agenda/build/Qt_6_9_1_for_macOS-Debug/CMakeFiles/DesktopAgenda.dir
+/Users/maxime/Projet-Desktop-agenda/build/Qt_6_9_1_for_macOS-Debug/CMakeFiles/edit_cache.dir
+/Users/maxime/Projet-Desktop-agenda/build/Qt_6_9_1_for_macOS-Debug/CMakeFiles/rebuild_cache.dir
+/Users/maxime/Projet-Desktop-agenda/build/Qt_6_9_1_for_macOS-Debug/CMakeFiles/DesktopAgenda_autogen_timestamp_deps.dir
+/Users/maxime/Projet-Desktop-agenda/build/Qt_6_9_1_for_macOS-Debug/CMakeFiles/DesktopAgenda_autogen.dir

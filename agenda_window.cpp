@@ -16,16 +16,15 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     : QMainWindow(parent),
     calendar(new QCalendarWidget),
     eventList(new QListWidget),
-    addButton(new QPushButton("➕", this)) // Parent direct de la fenêtre
+    addButton(new QPushButton("➕", this)), // Parent direct de la fenêtre
+    inviteServer(new QTcpServer(this)),      // ✅ Ajout serveur invitations
+    inviteButton(new QPushButton("📨 Inviter", this)) // ✅ Ajout bouton inviter
 {
     // Mise en page
     QWidget *central = new QWidget;
     QHBoxLayout *mainLayout = new QHBoxLayout(central);
 
     // ✅ Colonne gauche : Calendrier + Liste
-    QVBoxLayout *leftLayout = new QVBoxLayout;
-    leftLayout->addWidget(calendar);
-    leftLayout->addWidget(eventList);
     leftLayout = new QVBoxLayout;
     leftLayout->addWidget(calendar);
     leftLayout->addWidget(eventList);
@@ -42,14 +41,26 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     QPushButton:hover {
         background-color: #D08770;
     }
-)");
-    leftLayout->addWidget(deleteButton); // Ajoute sous la liste
-
-    // Connecter le bouton à la suppression
-    connect(deleteButton, &QPushButton::clicked, this, &AgendaWindow::deleteEvent);
-
+    )");
     leftLayout->addWidget(deleteButton);
 
+    connect(deleteButton, &QPushButton::clicked, this, &AgendaWindow::deleteEvent);
+
+    // ✅ Ajout du bouton Inviter
+    inviteButton->setStyleSheet(R"(
+    QPushButton {
+        background-color: #88C0D0;
+        color: white;
+        border-radius: 8px;
+        padding: 6px;
+        font-weight: bold;
+    }
+    QPushButton:hover {
+        background-color: #81A1C1;
+    }
+    )");
+    leftLayout->addWidget(inviteButton);
+    connect(inviteButton, &QPushButton::clicked, this, &AgendaWindow::sendInvitation);
 
     // ✅ Colonne droite : Vue horaire
     hourView = new QTableWidget;
@@ -68,8 +79,6 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     mainLayout->addWidget(hourView, 1);
 
     setCentralWidget(central);
-
-
 
     // 🎨 Couleur spéciale pour la date d’aujourd’hui
     QTextCharFormat todayFormat;
@@ -107,13 +116,11 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
             color: #ECEFF4;
             background-color: #2E3440;
         }
-
         QCalendarWidget QWidget {
             background-color: #3B4252;
             color: #ECEFF4;
             border-radius: 10px;
         }
-
         QCalendarWidget QToolButton {
             background-color: #5E81AC;
             color: #ECEFF4;
@@ -121,25 +128,21 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
             padding: 4px;
             margin: 2px;
         }
-
         QCalendarWidget QToolButton:hover {
             background-color: #81A1C1;
         }
-
         QCalendarWidget QAbstractItemView {
             selection-background-color: #88C0D0;
             selection-color: #2E3440;
             background-color: #3B4252;
             border: none;
         }
-
         QListWidget {
             background-color: #3B4252;
             border: none;
             border-radius: 8px;
             padding: 8px;
         }
-
         QListWidget::item {
             background-color: #434C5E;
             margin: 6px;
@@ -147,7 +150,6 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
             border-radius: 8px;
             box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
         }
-
         QListWidget::item:selected {
             background-color: #81A1C1;
             color: #2E3440;
@@ -159,19 +161,28 @@ AgendaWindow::AgendaWindow(QWidget *parent, const QString &userEmail)
     connect(calendar, &QCalendarWidget::selectionChanged, [=]() {
         QDate selectedDate = calendar->selectedDate();
         updateEventList(selectedDate);
-        updateHourView(selectedDate); // ✅ Met à jour la vue horaire
+        updateHourView(selectedDate);
     });
 
+    // ✅ Serveur d'invitations pour recevoir
+    connect(inviteServer, &QTcpServer::newConnection, this, &AgendaWindow::handleIncomingInvitation);
+    inviteServer->listen(QHostAddress::Any, 5555);
 
     // Charger les événements
     loadEvents();
     updateEventList(calendar->selectedDate());
 }
 
+
 AgendaWindow::~AgendaWindow() {
     saveEvents();
     deleteButton = new QPushButton("🗑 Supprimer", this);
+    inviteServer = new QTcpServer(this);
+    connect(inviteServer, &QTcpServer::newConnection, this, &AgendaWindow::handleIncomingInvitation);
+    inviteServer->listen(QHostAddress::Any, 5555); // Port 5555
+
     deleteButton->setFixedHeight(40);
+
     deleteButton->setStyleSheet(R"(
     QPushButton {
         background-color: #BF616A;
@@ -221,6 +232,50 @@ void AgendaWindow::addEvent() {
         highlightEventDays();
     }
 }
+
+void AgendaWindow::handleIncomingInvitation() {
+    QTcpSocket *clientSocket = inviteServer->nextPendingConnection();
+    connect(clientSocket, &QTcpSocket::readyRead, [=]() {
+        QByteArray data = clientSocket->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        QJsonObject event = doc.object();
+
+        QString title = event["title"].toString();
+        QString dateStr = event["date"].toString();
+        QDate date = QDate::fromString(dateStr, Qt::ISODate);
+
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, "📨 Invitation reçue",
+                                      "Vous avez été invité à :\n\n📅 " + title +
+                                          "\n📆 Le : " + date.toString("dd/MM/yyyy") +
+                                          "\n\nSouhaitez-vous l’ajouter à votre calendrier ?",
+                                      QMessageBox::Yes | QMessageBox::No);
+
+        if (reply == QMessageBox::Yes) {
+            // ✅ Ajoute l’événement à la liste
+            events.append(event);
+            saveEvents();
+
+            // ✅ Rafraîchir la vue si c’est le jour sélectionné
+            if (calendar->selectedDate() == date) {
+                updateEventList(date);
+                updateHourView(date);
+            }
+
+            // ✅ Mettre en surbrillance le jour
+            highlightEventDays();
+
+            QMessageBox::information(this, "✅ Ajouté", "L’événement a été ajouté à votre calendrier.");
+        } else {
+            QMessageBox::information(this, "❌ Refusé", "Vous avez refusé l’invitation.");
+        }
+
+        clientSocket->close();
+        clientSocket->deleteLater();
+    });
+}
+
+
 
 
 
@@ -357,6 +412,54 @@ void AgendaWindow::saveEvents() {
         file.write(doc.toJson());
     }
 }
+
+void AgendaWindow::sendInvitation() {
+    bool ok;
+    QString ipAddress = QInputDialog::getText(this, "Inviter quelqu’un",
+                                              "Entrez l’adresse IP du destinataire :", QLineEdit::Normal,
+                                              "", &ok);
+    if (!ok || ipAddress.isEmpty()) return;
+
+    QListWidgetItem *selectedItem = eventList->currentItem();
+    if (!selectedItem) {
+        QMessageBox::warning(this, "Aucun événement", "Sélectionnez un événement à inviter.");
+        return;
+    }
+
+    // Trouve l’événement dans la liste
+    QString title = selectedItem->text();
+    QJsonObject eventToSend;
+    for (const QJsonValue &value : events) {
+        QJsonObject obj = value.toObject();
+        if (obj["title"].toString() == title &&
+            obj["date"].toString() == calendar->selectedDate().toString(Qt::ISODate)) {
+            eventToSend = obj;
+            break;
+        }
+    }
+
+    if (eventToSend.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Impossible de trouver l’événement.");
+        return;
+    }
+
+    // Envoie l’événement via TCP
+    QTcpSocket socket;
+    socket.connectToHost(ipAddress, 5555); // Port 5555 pour les invitations
+    if (!socket.waitForConnected(3000)) {
+        QMessageBox::warning(this, "Erreur", "Impossible de se connecter à " + ipAddress);
+        return;
+    }
+
+    QJsonDocument doc(eventToSend);
+    socket.write(doc.toJson());
+    socket.flush();
+    socket.waitForBytesWritten();
+    socket.disconnectFromHost();
+
+    QMessageBox::information(this, "Invitation envoyée", "L’événement a été envoyé à " + ipAddress);
+}
+
 
 void AgendaWindow::onDateSelected(const QDate &date) {
     updateEventList(date);

@@ -1,0 +1,2 @@
+set(__QT_DEPLOY_TARGET_DesktopAgenda_FILE /Users/maxime/Projet-Desktop-agenda/build/Qt_6_9_1_for_macOS-Debug/DesktopAgenda)
+set(__QT_DEPLOY_TARGET_DesktopAgenda_TYPE EXECUTABLE)
